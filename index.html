@@ -65,7 +65,47 @@
     .task-title {
       display: inline-block;
     }
-  </style>
+    .xp-bar {
+    background: #fee2e2;
+    height: 20px;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+
+  .xp-fill {
+    background: #f43f5e;
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease-in-out;
+  }
+
+  .level-up {
+    animation: pulse 1s ease-in-out;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); background: #fcd34d; }
+    50% { transform: scale(1.1); background: #fde68a; }
+    100% { transform: scale(1); background: transparent; }
+  }
+
+  .streak-glow {
+    color: #eab308;
+    font-weight: bold;
+    text-shadow: 0 0 8px #fde68a;
+  }
+
+  .task-checkbox:checked + .task-title {
+    animation: pop 0.3s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+</style>
 </head>
 <body>
   <div class="container">
@@ -75,7 +115,13 @@
     </header>
 
     <div class="xp-level">
-      🧠 XP: <span id="xp">0</span> • 🎮 Level: <span id="level">1</span> • 🔥 Streak: <span id="streak">0</span> days
+      <div>
+        🧠 XP: <span id="xp">0</span> • 🎮 Level: <span id="level">1</span>
+      </div>
+      <div class="xp-bar">
+        <div id="xp-fill" class="xp-fill"></div>
+      </div>
+      🔥 Streak: <span id="streak" class="">0</span> days
     </div>
 
     <div class="card">
@@ -102,6 +148,7 @@
   <script>
     const xpDisplay = document.getElementById("xp");
     const levelDisplay = document.getElementById("level");
+    const xpFill = document.getElementById("xp-fill");
     const streakDisplay = document.getElementById("streak");
     const taskDate = document.getElementById("task-date");
     const taskTitle = document.getElementById("task-title");
@@ -118,34 +165,46 @@
     const getLevel = xp => Math.floor(xp / 100) + 1;
 
     const render = () => {
-      xpDisplay.textContent = xp;
-      levelDisplay.textContent = getLevel(xp);
-      streakDisplay.textContent = streak;
+  const level = getLevel(xp);
+  const xpInLevel = xp % 100;
 
-      const selected = taskDate.value;
-      taskList.innerHTML = "";
-      const todayTasks = tasks.filter(t => t.date === selected);
+  xpDisplay.textContent = xp;
+  levelDisplay.textContent = level;
+  xpFill.style.width = `${xpInLevel}%`;
 
-      todayTasks.forEach((task, idx) => {
-        const div = document.createElement("div");
-        div.className = "card";
+  if (xpInLevel === 0 && xp !== 0) {
+    levelDisplay.classList.add("level-up");
+    setTimeout(() => levelDisplay.classList.remove("level-up"), 1000);
+  }
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.className = "task-checkbox";
-        checkbox.checked = task.completed;
-        checkbox.addEventListener("change", () => toggleTask(selected, idx));
+  streakDisplay.textContent = streak;
+  streakDisplay.className = streak >= 3 ? "streak-glow" : "";
 
-        const span = document.createElement("span");
-        span.className = "task-title";
-        if (task.completed) span.classList.add("task-complete");
-        span.textContent = task.title + ` (${task.xp} XP)`;
+  const selected = taskDate.value;
+  taskList.innerHTML = "";
+  const todayTasks = tasks.filter(t => t.date === selected);
 
-        div.appendChild(checkbox);
-        div.appendChild(span);
-        taskList.appendChild(div);
-      });
-    };
+  todayTasks.forEach((task, idx) => {
+    const div = document.createElement("div");
+    div.className = "card";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-checkbox";
+    checkbox.checked = task.completed;
+    checkbox.addEventListener("change", () => toggleTask(selected, idx));
+
+    const span = document.createElement("span");
+    span.className = "task-title";
+    if (task.completed) span.classList.add("task-complete");
+    span.textContent = task.title + ` (${task.xp} XP)`;
+
+    div.appendChild(checkbox);
+    div.appendChild(span);
+    taskList.appendChild(div);
+  });
+};
+
 
     const addTask = () => {
       const title = taskTitle.value.trim();
