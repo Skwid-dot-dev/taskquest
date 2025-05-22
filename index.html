@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskQuest</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(to bottom right, #fff7ed, #ffe4e6);
+      color: #333;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: #e11d48;
+    }
+    .card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ddd;
+      border-radius: 0.5rem;
+    }
+    button {
+      background-color: #f43f5e;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #e11d48;
+    }
+    .task-complete {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .xp-level {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .achievement {
+      background-color: #fef9c3;
+      border-left: 4px solid #facc15;
+    }
+    .task-checkbox {
+      margin-right: 0.5rem;
+    }
+    .task-title {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>TaskQuest</h1>
+      <p>Gamify your day, collect achievements, and level up your life!</p>
+    </header>
+
+    <div class="xp-level">
+      🧠 XP: <span id="xp">0</span> • 🎮 Level: <span id="level">1</span> • 🔥 Streak: <span id="streak">0</span> days
+    </div>
+
+    <div class="card">
+      <h2>📅 Select a Date</h2>
+      <input type="date" id="task-date" />
+    </div>
+
+    <div class="card">
+      <h2>📝 Add Task</h2>
+      <input type="text" id="task-title" placeholder="Enter task title..." />
+      <button onclick="addTask()">➕ Add Task</button>
+    </div>
+
+    <div id="task-list"></div>
+
+    <div class="card achievement">
+      <h3>🏆 “Daily Devotion” Badge</h3>
+      <p>Keep a task streak for 3+ days in a row</p>
+    </div>
+
+    <footer class="xp-level">© 2025 TaskQuest</footer>
+  </div>
+
+  <script>
+    const xpDisplay = document.getElementById("xp");
+    const levelDisplay = document.getElementById("level");
+    const streakDisplay = document.getElementById("streak");
+    const taskDate = document.getElementById("task-date");
+    const taskTitle = document.getElementById("task-title");
+    const taskList = document.getElementById("task-list");
+
+    const load = (key, fallback) => JSON.parse(localStorage.getItem(key)) || fallback;
+    const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+
+    let tasks = load("taskquest-tasks", []);
+    let xp = load("taskquest-xp", 0);
+    let streak = load("taskquest-streak", 0);
+    let lastCompleteDate = load("taskquest-last-completed", null);
+
+    const getLevel = xp => Math.floor(xp / 100) + 1;
+
+    const render = () => {
+      xpDisplay.textContent = xp;
+      levelDisplay.textContent = getLevel(xp);
+      streakDisplay.textContent = streak;
+
+      const selected = taskDate.value;
+      taskList.innerHTML = "";
+      const todayTasks = tasks.filter(t => t.date === selected);
+
+      todayTasks.forEach((task, idx) => {
+        const div = document.createElement("div");
+        div.className = "card";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "task-checkbox";
+        checkbox.checked = task.completed;
+        checkbox.addEventListener("change", () => toggleTask(selected, idx));
+
+        const span = document.createElement("span");
+        span.className = "task-title";
+        if (task.completed) span.classList.add("task-complete");
+        span.textContent = task.title + ` (${task.xp} XP)`;
+
+        div.appendChild(checkbox);
+        div.appendChild(span);
+        taskList.appendChild(div);
+      });
+    };
+
+    const addTask = () => {
+      const title = taskTitle.value.trim();
+      const date = taskDate.value;
+      if (!title || !date) return;
+
+      tasks.push({ title, date, xp: Math.floor(Math.random() * 50 + 10), completed: false });
+      save("taskquest-tasks", tasks);
+      taskTitle.value = "";
+      render();
+    };
+
+    const toggleTask = (date, index) => {
+      const i = tasks.findIndex((t, idx) => t.date === date && tasks.indexOf(t) === index);
+      if (i >= 0 && !tasks[i].completed) {
+        tasks[i].completed = true;
+        xp += tasks[i].xp;
+
+        // Check streak
+        const today = new Date().toISOString().split("T")[0];
+        if (lastCompleteDate) {
+          const last = new Date(lastCompleteDate);
+          const now = new Date(today);
+          const diff = (now - last) / (1000 * 60 * 60 * 24);
+          streak = diff === 1 ? streak + 1 : 1;
+        } else {
+          streak = 1;
+        }
+        lastCompleteDate = today;
+
+        save("taskquest-xp", xp);
+        save("taskquest-streak", streak);
+        save("taskquest-last-completed", lastCompleteDate);
+        save("taskquest-tasks", tasks);
+        render();
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const today = new Date().toISOString().split("T")[0];
+      taskDate.value = today;
+      render();
+    });
+  </script>
+</body>
+</html>
